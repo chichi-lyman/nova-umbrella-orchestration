@@ -1,0 +1,95 @@
+openapi: 3.1.0
+info:
+  title: CRJS 355 Evidence Ledger — Portfolio Prototype
+  version: 0.1.0
+  description: Synthetic data only. Demo identity headers are not production authentication.
+servers:
+  - url: http://127.0.0.1:8000
+security:
+  - DemoActorHeaders: []
+paths:
+  /evidence:
+    post:
+      summary: Register evidence and initial custody event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [case_ref, description, category, intake_source]
+              properties:
+                case_ref: {type: string, minLength: 1}
+                description: {type: string, minLength: 1}
+                category: {type: string, minLength: 1}
+                intake_source: {type: string, minLength: 1}
+                evidence_id: {type: string}
+                digital_text_payload: {type: string}
+      responses:
+        "201": {description: Evidence record created}
+        "403": {description: Role not permitted}
+        "409": {description: Duplicate identifier}
+  /evidence/{evidence_id}:
+    get:
+      summary: Retrieve evidence item
+      parameters:
+        - $ref: "#/components/parameters/EvidenceId"
+      responses:
+        "200": {description: Evidence item}
+        "404": {description: Not found}
+  /evidence/{evidence_id}/custody:
+    get:
+      summary: Retrieve append-only custody event history
+      parameters:
+        - $ref: "#/components/parameters/EvidenceId"
+      responses:
+        "200": {description: Ordered custody events}
+  /evidence/{evidence_id}/transfers:
+    post:
+      summary: Request custody transfer
+      parameters:
+        - $ref: "#/components/parameters/EvidenceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipient_id]
+              properties:
+                recipient_id: {type: string, minLength: 1}
+      responses:
+        "201": {description: Transfer requested}
+        "403": {description: Not current custodian or role denied}
+        "409": {description: State conflict}
+  /transfers/{transfer_id}/accept:
+    post:
+      summary: Receiver acknowledges transfer
+      parameters:
+        - in: path
+          name: transfer_id
+          required: true
+          schema: {type: string}
+      responses:
+        "200": {description: Transfer accepted}
+        "403": {description: Only designated receiver can accept}
+        "409": {description: Transfer is not pending}
+  /audit:
+    get:
+      summary: Admin/auditor audit event list
+      responses:
+        "200": {description: Audit records}
+        "403": {description: Role denied}
+components:
+  securitySchemes:
+    DemoActorHeaders:
+      type: apiKey
+      in: header
+      name: X-Actor-Id
+      description: Pair with X-Actor-Role. Demo only; replace with real identity provider.
+  parameters:
+    EvidenceId:
+      in: path
+      name: evidence_id
+      required: true
+      schema: {type: string}
